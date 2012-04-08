@@ -145,29 +145,18 @@ namespace sfe {
 		m_isStarving = false;
 	}
 	
-	void Movie_audio::setPlayingOffset(sf::Time time)
+	void Movie_audio::preSeek(sf::Time position)
 	{
 		sf::SoundStream::stop();
-		
-		// TODO: does not work yet
-		// TODO: apply float -> Uin32 change
-		AVRational tb = m_parent.getAVFormatContext()->streams[m_streamID]->time_base;
-		float ftb = (float)tb.num / tb.den;
-		int64_t avTime = time.asMilliseconds() * ftb;
-		int res = av_seek_frame(m_parent.getAVFormatContext(), m_streamID, avTime, AVSEEK_FLAG_BACKWARD);
-		
-		if (res < 0)
-			std::cerr << "Movie_audio::SetPlayingOffset() - av_seek_frame() failed" << std::endl;
-		else
-		{
-			while (m_packetList.size()) {
-				popFrame();
-			}
-			
-			sf::SoundStream::play();
-		}
+		flushPendingFrames();
 	}
 	
+	void Movie_audio::postSeek(sf::Time position)
+	{
+		sf::SoundStream::setPlayingOffset(position);
+		sf::SoundStream::play();
+	}
+	 
 	int Movie_audio::getStreamID()
 	{
 		return m_streamID;
@@ -292,6 +281,21 @@ namespace sfe {
 		return m_packetList.front();
 	}
 	
+	void Movie_audio::flushPendingFrames(void)
+	{
+		sf::Lock l(m_packetListMutex);
+		
+		while (!m_packetList.empty())
+		{
+			AVPacket *pkt = m_packetList.front();
+			m_packetList.pop();
+			av_free_packet(pkt);
+			av_free(pkt);
+		}
+		
+		m_pendingDataLength = 0;
+	}
+	
 	bool Movie_audio::onGetData(Chunk& buffer)
     {
 		bool flag = true;
@@ -307,6 +311,13 @@ namespace sfe {
 			{
 				flag = false;
 			}
+			
+			/*sf::Time realTime = m_parent.getPlayingOffset();
+			sf::Time audioTime = getPlayingOffset();
+			std::cout << "real time is " << realTime.asMilliseconds()
+			<< "ms whereas audio time is " << audioTime.asMilliseconds()
+			<< "ms - diff : " << (audioTime - realTime).asMilliseconds() << "ms" << std::endl;
+			 */
 		}
 		
 		if (!flag)

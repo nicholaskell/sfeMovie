@@ -186,11 +186,8 @@ namespace sfe {
 		Status getStatus(void) const;
 		
 		/* @brief Sets the current playing position in the movie
-		 *
-		 * @return the playing position, in milliseconds
-		 * NOTE: Not yet implemented! 
 		 */
-		//void SetPlayingOffset(sf::Uint32 position);
+		void setPlayingOffset(sf::Time position);
 		
 		/** @brief Returns the current playing position in the movie
 		 *
@@ -249,10 +246,12 @@ namespace sfe {
 		void setEofReached(bool flag);
 		void setDuration(sf::Time duration);
 		bool readFrameAndQueue(void);
+		void seekToPosition(sf::Time position);
 		bool saveFrame(AVPacketRef frame);
-		static bool usesDebugMessages(void);
 		void starvation(void);
 		void watch(void);
+		
+		static bool usesDebugMessages(void);
 		
 		AVFormatContextRef m_avFormatCtx;
 		bool m_hasVideo;

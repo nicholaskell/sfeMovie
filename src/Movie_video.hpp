@@ -64,7 +64,8 @@ namespace sfe {
 		
 		bool getLateState(sf::Time& waitTime) const;
 		bool isStarving(void);
-		void setPlayingOffset(sf::Time time);
+		void preSeek(sf::Time position);
+		void postSeek(sf::Time position);
 		//void SkipFrames(unsigned count);
 		
 		void swapImages(bool unconditionned = false);
@@ -80,9 +81,10 @@ namespace sfe {
 		void pushFrame(AVPacket *pkt);
 		void popFrame(void);
 		AVPacket *frontFrame(void);
+		void flushPendingFrames(void);
 		void watchThread(void);
 		
-	private:
+	//private:
 		// ------------------------- Video attributes --------------------------
 		Movie& m_parent;			// Link to the parent movie
 		

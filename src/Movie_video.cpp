@@ -309,9 +309,7 @@ namespace sfe {
 			av_free(m_backRGBAFrame), m_backRGBAFrame = NULL;
 		
 		// Free the remaining accumulated packets
-		while (m_packetList.size()) {
-			popFrame();
-		}
+		flushPendingFrames();
 		
 		if (m_swsCtx)
 			sws_freeContext(m_swsCtx), m_swsCtx = NULL;
@@ -332,6 +330,12 @@ namespace sfe {
 	{
 		ensureTextureUpdate();
 		
+		/*sf::Time realTime = m_parent.getPlayingOffset();
+		sf::Time movieTime = (sf::Int64)m_displayedFrameCount * m_wantedFrameTime;
+		std::cout << "real time is " << realTime.asMilliseconds()
+		<< "ms whereas video time is " << movieTime.asMilliseconds()
+		<< "ms - diff : " << (movieTime - realTime).asMilliseconds() << "ms" << std::endl;
+		*/
 		target.draw(m_sprite, states); // 38% on Windows
 
 		// Allow thread switching
@@ -467,27 +471,17 @@ namespace sfe {
 	}
 	
 	
-	void Movie_video::setPlayingOffset(sf::Time time)
+	void Movie_video::preSeek(sf::Time position)
 	{
-		stop();
-		
-		// TODO: does not work yet
-		AVRational tb = m_parent.getAVFormatContext()->streams[m_streamID]->time_base;
-		float ftb = (float)tb.num / tb.den;
-		int64_t avTime = time.asMilliseconds() * ftb;
-		int res = av_seek_frame(m_parent.getAVFormatContext(), m_streamID, avTime, AVSEEK_FLAG_BACKWARD);
-		
-		if (res < 0)
-		{
-			std::cerr << "Movie_video::SeekToTime() - av_seek_frame() failed" << std::endl;
-		}
-		else
-		{
-			play();
-			m_displayedFrameCount = time.asSeconds() / m_wantedFrameTime.asSeconds();
-		}
+		m_running = 0;
+		flushPendingFrames();
 	}
 	
+	void Movie_video::postSeek(sf::Time position)
+	{
+		m_displayedFrameCount = position.asMilliseconds() / m_wantedFrameTime.asMilliseconds();
+		m_running = 1;
+	}
 	
 	
 	bool Movie_video::preLoad(void)
@@ -640,6 +634,19 @@ namespace sfe {
 		
 		sf::Lock l(m_packetListMutex);
 		return m_packetList.front();
+	}
+	
+	void Movie_video::flushPendingFrames(void)
+	{
+		sf::Lock l(m_packetListMutex);
+		
+		while (!m_packetList.empty())
+		{
+			AVPacket *pkt = m_packetList.front();
+			m_packetList.pop();
+			av_free_packet(pkt);
+			av_free(pkt);
+		}
 	}
 	
 } // namespace sfe

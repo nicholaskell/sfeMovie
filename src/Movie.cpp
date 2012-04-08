@@ -156,7 +156,7 @@ namespace sfe {
 			if (hasAudioTrack())
 			{
 				m_progressAtPause = m_audio->getPlayingOffset();
-				//std::cout << "synch according to audio track=" << m_progressAtPause << std::endl;
+				//std::cout << "synch according to audio track=" << m_progressAtPause.asMilliseconds() << std::endl;
 			}
 			else
 			{
@@ -293,18 +293,19 @@ namespace sfe {
 		return m_status;
 	}
 
-	/*void Movie::SetPlayingOffset(float position)
-	 #error change floag to int
+	void Movie::setPlayingOffset(sf::Time position)
 	{
-		PrintWithTime("offset before : " + s(GetPlayingOffset()));
-
-		IFAUDIO(m_audio->setPlayingOffset(position));
-		IFVIDEO(m_video->setPlayingOffset(position));
+		IFAUDIO(m_audio->preSeek(position));
+		IFVIDEO(m_video->preSeek(position));
+		
+		seekToPosition(position);
+		
 		m_progressAtPause = position;
-		m_overallTimer.Reset();
-
-		PrintWithTime("offset after : " + s(GetPlayingOffset()));
-	}*/
+		m_overallTimer.restart();
+		
+		IFAUDIO(m_audio->postSeek(position));
+		IFVIDEO(m_video->postSeek(position));
+	}
 
 	sf::Time Movie::getPlayingOffset() const
 	{
@@ -435,6 +436,38 @@ namespace sfe {
 		}
 		
 		return flag;
+	}
+	
+	
+	void Movie::seekToPosition(sf::Time position)
+	{
+		sf::Lock l(m_readerMutex);
+		
+		if (m_hasVideo)
+		{
+			int videoStreamID = m_video->getStreamID();
+			AVRational timeBase = m_avFormatCtx->streams[videoStreamID]->time_base;
+			int flags = (position < getPlayingOffset()) ? AVSEEK_FLAG_BACKWARD : 0;
+			
+			int64_t seek_pos = (int64_t)(position.asSeconds() * AV_TIME_BASE);
+			int64_t seek_target = av_rescale_q(seek_pos, AV_TIME_BASE_Q, timeBase);
+			
+			if(av_seek_frame(m_avFormatCtx, videoStreamID, seek_target, flags) < 0)
+				std::cerr << "*** error: Movie::seekToPosition() - error while seeking" << std::endl;
+		}
+		
+		if (m_hasAudio)
+		{
+			int audioStreamID = m_audio->getStreamID();
+			AVRational timeBase = m_avFormatCtx->streams[audioStreamID]->time_base;
+			int flags = (position < getPlayingOffset()) ? AVSEEK_FLAG_BACKWARD : 0;
+			
+			int64_t seek_pos = (int64_t)(position.asSeconds() * AV_TIME_BASE);
+			int64_t seek_target = av_rescale_q(seek_pos, AV_TIME_BASE_Q, timeBase);
+			
+			if(av_seek_frame(m_avFormatCtx, audioStreamID, seek_target, flags) < 0)
+				std::cerr << "*** error: Movie::seekToPosition() - error while seeking" << std::endl;
+		}
 	}
 	
 	bool Movie::saveFrame(AVPacket *frame)

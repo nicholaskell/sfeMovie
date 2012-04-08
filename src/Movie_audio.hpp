@@ -54,10 +54,11 @@ namespace sfe {
 		using sf::SoundStream::getVolume;
 		using sf::SoundStream::getSampleRate;
 		using sf::SoundStream::getChannelCount;
-		//using sf::SoundStream::SetPlayingOffset;
+		using sf::SoundStream::setPlayingOffset;
 		using sf::SoundStream::getPlayingOffset;
 		
-		void setPlayingOffset(sf::Time time);
+		void preSeek(sf::Time position);
+		void postSeek(sf::Time position);
 		
 		int getStreamID();
 		bool isStarving(void);
@@ -69,11 +70,12 @@ namespace sfe {
 		void pushFrame(AVPacket *pkt);
 		void popFrame(void);
 		AVPacket *frontFrame(void);
+		void flushPendingFrames(void);
 		
 		bool onGetData(Chunk& Data);
 		void onSeek(sf::Time timeOffset);
 		
-	private:
+	//private:
 		// ------------------------- Audio attributes --------------------------
 		Movie& m_parent;
 		
