@@ -27,6 +27,11 @@
 #include <iostream>
 #include <cassert>
 #include "utils.hpp"
+#include <libavcodec/avcodec.h>
+
+#ifndef SAMPLE_FMT_S16
+# define SAMPLE_FMT_S16 1
+#endif
 
 #define AUDIO_BUFSIZ AVCODEC_MAX_AUDIO_FRAME_SIZE // 192000 bytes, 1 second of 48kHz 32bit audio
 

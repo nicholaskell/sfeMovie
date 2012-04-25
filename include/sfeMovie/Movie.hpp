@@ -231,13 +231,13 @@ namespace sfe {
 		
 	private:
 		
-#ifndef LIBAVCODEC_VERSION
-		typedef void *AVFormatContextRef;
-		typedef void *AVPacketRef;
-#else
+//#ifndef LIBAVCODEC_VERSION
+//		typedef void *AVFormatContextRef;
+//		typedef void *AVPacketRef;
+//#else
 		typedef AVFormatContext *AVFormatContextRef;
 		typedef AVPacket *AVPacketRef;
-#endif
+//#endif
 		void internalStop(bool calledFromWatchThread);
 		void draw(sf::RenderTarget& Target, sf::RenderStates states) const;
 		
